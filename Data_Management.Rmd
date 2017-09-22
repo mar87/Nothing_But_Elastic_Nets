@@ -1,0 +1,117 @@
+---
+title: "NBA Hackathon Data Management"
+author: "Megan Robertson"
+date: "9/19/2017"
+output: html_document
+---
+
+```{r}
+library(data.table); library(dplyr); library(tidyr); library(plyr); library(XML)
+
+#other data keys 
+setwd('/Users/meganrobertson/Desktop/Basketball_Data/') #change to your data location
+play_by_play = data.frame(fread('Play_by_Play_New.csv'))
+player_box_scores = data.frame(fread('Player_Boxscores.csv'))
+
+#player details - country, school, draft year, draft number
+player_details = data.frame(fread('2014-17_nba_player_details_data.txt'))
+
+#sportvu box scores (number of touches, distance of shots, etc.)
+sv_box_scores_14_15 = data.frame(fread('2014-15_nba_sv_box_scores.txt'))
+sv_box_scores_15_16 = data.frame(fread('2015-16_nba_sv_box_scores.txt'))
+sv_box_scores_16_17 = data.frame(fread('2016-17_nba_sv_box_scores.txt'))
+
+#shot logs
+shot_log_14_15 = data.frame(fread('2014-15_nba_shot_log.txt'))
+shot_log_15_16 = data.frame(fread('2015-16_nba_shot_log.txt'))
+shot_log_16_17 = data.frame(fread('2016-17_nba_shot_log.txt'))
+
+#pass logs - can use to map passes, missing 2014-2015....
+shot_pass_14_15 = data.frame(fread('2014-15_nba_pass_log.txt'))
+pass_log_15_16 = data.frame(fread('2015-16_nba_pass_log.txt'))
+pass_log_16_17 = data.frame(fread('2016-17_nba_pass_log.txt'))
+
+#possession logs
+possess_log_14_15 = data.frame(fread('2014-15_nba_possession_log.txt'))
+possess_log_15_16 = data.frame(fread('2015-16_nba_possession_log.txt'))
+possess_log_16_17 = data.frame(fread('2016-17_nba_possession_log.txt'))
+
+#rebound logs
+reb_log_14_15 = data.frame(fread('2014-15_nba_reb_log.txt'))
+reb_log_15_16 = data.frame(fread('2015-16_nba_reb_log.txt'))
+reb_log_16_17 = data.frame(fread('2016-17_nba_reb_log.txt'))
+
+#team map - conference, team, sportvuID
+team_map = data.frame(fread('Team_map.csv'))
+
+#player map - player id, sportvuID, name
+player_map = data.frame(fread('Player_map.csv'))
+
+#game map - ID, sportvuID, season, date
+game_map = data.frame(fread('Game_Map.csv'))
+
+setwd('/Users/meganrobertson/Desktop/Basketball_Data/tracking_data/') #change to your data location
+```
+
+
+```{r}
+#looping through the xml files and creating data frames
+setwd('/Users/meganrobertson/Desktop/Basketball_Data/tracking_data/003') #change to your data location
+
+#function takes in the location string for a moment and returns it as a data frame
+parse_loc <- function(loc){
+  df = data.frame(cbind(strsplit(loc[5], ";")[[1]])) #splitting the moment location into list ofstrings - each string is player or ball
+  df = separate(df, col = "cbind.strsplit.loc.5.........1...", into=c("team_id", "player_id", "x_loc", "y_loc", "z_loc"), sep=",")
+  df['game_clock'] = loc[[1]]
+  df['time'] = loc[[2]]
+  df['event_id'] = loc[[3]]
+  df['shot_clock'] = loc[[4]]
+  return(df)
+}
+
+#listing all files in the directory to parse
+all_files = list.files(getwd())
+
+#looping through all the files
+for (i in (270:length(all_files))){
+  print(i)
+  #parsing the document
+  doc = xmlTreeParse(all_files[i], useInternalNodes = TRUE)
+  
+  #getting quarter
+  st = gsub("\\..*", "", all_files[i])
+  quarter = substring(st, nchar(st))
+  visitors_team_code = xpathApply(doc, "//visiting-team/team-name/@name")[[1]][1]
+  home_team_code = xpathApply(doc, "//home-team/team-name/@name")[[1]][1]
+  sportvu_code = xpathApply(doc, "//gamecode/@code")[[1]][1]
+  
+  #gets list of individual moments during the game, this is a string that needs to be parsed
+  moments = xpathApply(doc, "//sequences")
+  
+  #extracting information from the moments node
+  game_clock = unlist(xpathApply(doc, "//sequences/moment/@game-clock")) 
+  time = unlist(xpathApply(doc, "//sequences/moment/@time")) #time
+  event_id = unlist(xpathApply(doc, "//sequences/moment/@game-event-id"))
+  shot_clock = unlist(xpathApply(doc, "//sequences/moment/@shot-clock"))
+  shot_loc = unlist(xpathApply(doc, "//sequences/moment/@locations"))
+
+  #combining into a list of lists
+  #each element of the list is the info for a particular moment
+  res = list(game_clock, time, event_id, shot_clock, shot_loc)
+  info = do.call(Map, c(c, res))
+
+  #converting into a data frame
+  df_list = lapply(info, parse_loc) #list of data frames
+  df = ldply(df_list, data.frame)
+  df['quarter'] = quarter
+  df['home_team'] = home_team_code; df['visitors'] = visitors_team_code
+  df['SportVU_Game_ID'] = sportvu_code
+  
+  write.csv(df, gsub("XML", "CSV", all_files[i]))
+}
+
+#003 - 90, 346
+```
+
+
+#add player names, team names, any action (create a column for each type of action - pass, defense, shot, etc.)
