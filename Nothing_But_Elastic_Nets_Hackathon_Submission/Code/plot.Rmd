@@ -1,0 +1,298 @@
+---
+title: "Plot Probabilities"
+author: "Federico Ferrari"
+date: "9/23/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r libraries, echo=F}
+library(dplyr)
+library(ggplot2)
+```
+
+# Explore the possesion log dataset
+
+```{r analyse RESULTS and PTS}
+possession1617 <- read.delim("/Users/Fed/desktop/Basketball_Data/NBAPlayerTrackingData_2014-17/2016-17_nba_possession_log.txt", row.names=NULL, stringsAsFactors=FALSE)
+
+table(possession1617$PTS)
+possession1617.normalpoints = possession1617 %>% filter(PTS <=4)
+ggplot(data=possession1617.normalpoints)+geom_bar(aes(x=PTS,fill=as.factor(PTS)),show.legend = F)+ggtitle("Points at end of possession (<=4)")
+
+total_res <- table(possession1617$RESULT)
+total_res
+total_res_100 <- total_res[total_res > 100]
+possession1617.res100.pt4 <- possession1617 %>% as_tibble() %>%filter(PTS<=4,RESULT %in% dimnames(total_res_100)[[1]])
+ggplot(data=possession1617.res100.pt4)+geom_bar(aes(x=RESULT,fill=as.factor(RESULT)),show.legend=F)+coord_flip()+ggtitle("Results at end of possession")
+```
+
+# Calculate aggregating points and point differences and plot!
+
+```{r calculate point differences}
+pick_alternate <- function(vec,ho_aw,team_indi){
+  teams <- unique(ho_aw)
+  rows <- which(ho_aw==teams[team_indi]) # team_indi=1 or 0 (away or home)
+  vec[-rows]=-vec[-rows]
+  return(vec)
+}
+
+get_team_indicator <- function(ho_aw){
+  teams <- unique(ho_aw)
+  return(as.vector(sapply(ho_aw, function(x) (which(teams==x))-1.5)*2))
+}
+
+#games.with.null <- unique(possession1617$GAME_ID[possession1617$TEAM_ID=="(null)"])
+
+games.with.null <- unique(possession1617$GAME_ID[possession1617$TEAM_ID=="(null)"])
+
+
+possession1617.game <- possession1617 %>% as_tibble() %>% filter(!GAME_ID %in% games.with.null) %>% group_by(GAME_ID) %>% mutate(AWAY_PTS = pick_alternate(PTS,TEAM_ID,1),HOME_PTS = pick_alternate(PTS,TEAM_ID,0)) %>% mutate(AWAY_PTS_NET = cumsum(AWAY_PTS),HOME_PTS_NET=cumsum(HOME_PTS),TIME_ELAPSED = cumsum(POSSESSION_LENGTH/10),TEAM=get_team_indicator(TEAM_ID)) %>% ungroup()
+
+games = unique(possession1617.game$GAME_ID)
+game_mark = games[6]
+
+game_selected = possession1617.game %>% filter(GAME_ID==game_mark)
+
+plot(possession1617.game$TIME_ELAPSED[possession1617.game$GAME_ID == game_mark],possession1617.game$AWAY_PTS_NET[possession1617.game$GAME_ID == game_mark],type="l")
+abline(v=possession1617.game$TIME_ELAPSED[possession1617.game$GAME_ID == game_mark & possession1617.game$RESULT == "Timeout"], col=possession1617.game$TEAM[possession1617.game$GAME_ID == game_mark & possession1617.game$RESULT == "Timeout"]+2)
+legend("bottomleft",c("team1","team2"),col=c(1,3),lty=1)
+
+```
+
+# Label each possession as part of a run or not
+```{r label streak}
+label_streak <- function(time_elapsed, pts_net, time_window=120, threshold = 6){
+  st = 0
+  en = 1
+  n = length(time_elapsed)
+  #streak_st <- NULL
+  #streak_en <- NULL
+  labels <- rep(0,n)
+  while(en <= n){
+    if(st==0){
+      pre_time=0
+    }else{
+      pre_time=time_elapsed[st]
+    }
+    
+    while((time_elapsed[en]-pre_time)<(time_window-10) & en<n){
+      en = en+1
+    }
+    int_range = range(pts_net[(st+1):en])
+    int_max = int_range[2]
+    int_min = int_range[1]
+    #if((int_max-int_min)>threshold){
+    if(abs(pts_net[en]-pts_net[st+1])>threshold){
+      #streak_st <- c(streak_st,st)
+      #streak_en <- c(streak_en,en)
+      labels[(st+1):en] <- 1
+    }#else{
+      #labels[(st+1):en] <- 0
+    #}
+    if(en<n){
+      st = st+1
+      en = en+1
+    }else{
+      break
+    }
+  }
+  #res = data.frame(streak_start=streak_st,streak_end = streak_en)
+  #return(res)
+  return(labels)
+}
+
+```
+
+# Label runs into -1,0,1 (-1 for away team, 1 for home team)
+
+```{r label streak}
+label_streak_directed <- function(time_elapsed, pts_net, time_window=120, threshold = 6, team="away"){
+  st = 0
+  en = 1
+  n = length(time_elapsed)
+  #streak_st <- NULL
+  #streak_en <- NULL
+  labels <- rep(0,n)
+  while(en <= n){
+    if(st==0){
+      pre_time=0
+    }else{
+      pre_time=time_elapsed[st]
+    }
+    
+    while((time_elapsed[en]-pre_time)<(time_window-10) & en<n){
+      en = en+1
+    }
+    int_range = range(pts_net[(st+1):en])
+    int_max = int_range[2]
+    int_min = int_range[1]
+    #if((int_max-int_min)>threshold){
+    if((pts_net[en]-pts_net[st+1]) > threshold){
+      #streak_st <- c(streak_st,st)
+      #streak_en <- c(streak_en,en)
+      if(team=="away"){
+        labels[(st+1):en] <- -1
+      }else{
+        labels[(st+1):en] <- 1
+      }
+    }else if((pts_net[en]-pts_net[st+1]) < -threshold){
+      if(team=="away"){
+        labels[(st+1):en] <- 1
+      }else{
+        labels[(st+1):en] <- -1
+      }
+    }
+    if(en<n){
+      st = st+1
+      en = en+1
+    }else{
+      break
+    }
+  }
+  #res = data.frame(streak_start=streak_st,streak_end = streak_en)
+  #return(res)
+  return(labels)
+}
+
+label_streak_team <- function(team,label_dir){
+  diffs <- abs(team-label_dir)
+  diffs_label0 <- which(diffs==1)
+  diffs[diffs==0] <- 1
+  diffs[diffs==2] <- -1
+  diffs[diffs_label0] <- 0
+  return(diffs)
+}
+
+```
+
+```{r apply function to generate labels}
+possession1617.game.label <- possession1617.game %>% group_by(GAME_ID) %>% mutate(STREAK.6.120 = label_streak(TIME_ELAPSED,AWAY_PTS_NET),STREAK.6.180=label_streak(TIME_ELAPSED,AWAY_PTS_NET,time_window = 180),STREAK.6.240=label_streak(TIME_ELAPSED,AWAY_PTS_NET,time_window = 240),STREAK.6.120.DIREC = label_streak_directed(TIME_ELAPSED,AWAY_PTS_NET)) %>% mutate(STREAK.TEAM = label_streak_team(TEAM,STREAK.6.120.DIREC)) %>% ungroup()
+```
+
+
+```{r plot labels}
+
+games = unique(possession1617.game$GAME_ID)
+game_mark = games[6]
+
+#game_selected = possession1617.game.label %>% filter(GAME_ID==game_mark)
+
+plot(possession1617.game.label$TIME_ELAPSED[possession1617.game.label$GAME_ID == game_mark],possession1617.game.label$AWAY_PTS_NET[possession1617.game.label$GAME_ID == game_mark],type="l")
+points(possession1617.game.label$TIME_ELAPSED[possession1617.game.label$GAME_ID == game_mark & possession1617.game.label$STREAK.6.120 == 1],possession1617.game.label$AWAY_PTS_NET[possession1617.game.label$GAME_ID == game_mark & possession1617.game.label$STREAK.6.120 == 1],col="blue",pch=16,lwd=2)
+#points(possession1617.game.label$TIME_ELAPSED[possession1617.game.label$GAME_ID == game_mark & possession1617.game.label$STREAK.6.180 == 1],possession1617.game.label$AWAY_PTS_NET[possession1617.game.label$GAME_ID == game_mark & possession1617.game.label$STREAK.6.180 == 1],col="orange",pch=16)
+#points(possession1617.game.label$TIME_ELAPSED[possession1617.game.label$GAME_ID == game_mark & possession1617.game.label$STREAK.6.240 == 1],possession1617.game.label$AWAY_PTS_NET[possession1617.game.label$GAME_ID == game_mark & possession1617.game.label$STREAK.6.240 == 1],col="brown",pch=16)
+
+abline(v=possession1617.game.label$TIME_ELAPSED[possession1617.game.label$GAME_ID == game_mark & possession1617.game.label$RESULT == "Timeout"], col=possession1617.game.label$TEAM[possession1617.game.label$GAME_ID == game_mark & possession1617.game.label$RESULT == "Timeout"]+1)
+#legend("bottomleft",c("team1","team2"),col=c(1,2),lty=1)
+
+
+```
+
+# Make more presentable plots with ggplot2
+```{r plot labels with ggplot2}
+library(wesanderson)
+games = unique(possession1617.game$GAME_ID)
+game_mark = games[6]
+
+game_selected = possession1617.game.label %>% filter(GAME_ID==game_mark)
+game_selected_streak = game_selected %>% filter(STREAK.6.120 == 1)
+game_selected_timeout = game_selected %>% filter(RESULT == "Timeout")
+
+ggplot(data=game_selected)+geom_line(mapping = aes(x=TIME_ELAPSED,y=AWAY_PTS_NET,color=STREAK.6.120+1),show.legend = F,size=0.8)+geom_vline(xintercept = game_selected_timeout$TIME_ELAPSED,color=(game_selected_timeout$TEAM+1)*2,linetype=2,size=0.5)+labs(x="seconds in game",y="net points won")
+
+```
+
+# Write labeled file
+```{r write the labeled 1617 file}
+write.csv(possession1617.game.label,"~/NBA hackathon/possession_1617_labeled_directed_team.csv",row.names = F)
+```
+
+# Explore other seasons
+```{r load all other seasons}
+possession1415 <- read.delim("~/NBA/NBA_TrackingData_2014-17/2014-15_nba_possession_log.txt", stringsAsFactors=FALSE)
+possession1617 <- read.delim("~/NBA/NBA_TrackingData_2014-17/2016-17_nba_possession_log.txt", stringsAsFactors=FALSE)
+```
+
+# Fit a multinomial prediction model to the data
+```{r sample data and split train test and fit model}
+library(nnet)
+# sample 100 games for model
+set.seed(1)
+sample.size <- 500
+game.train <- sample(games,sample.size*0.9)
+game.test <- sample(games[-which(games %in% game.train)],sample.size*0.1)
+sum(game.train=="21600099")
+#Okc-Gs
+game.test[51]="21600099"
+
+library(RcppRoll)
+roll_sum_fill <- function(x,n){
+  res = roll_sumr(x,n=n)
+  res[is.na(res)] = x[is.na(res)]
+  return(res)
+}
+
+# add the response (one-step lead)
+# add the cumulative points in the last 3 possessions
+possession1617.dataset = possession1617.game.label %>% select(GAME_ID,PERIOD,TEAM,AWAY_PTS,AWAY_PTS_NET,STREAK.6.120.DIREC,STREAK.TEAM,PASSES,TOUCHES,DRIBBLES,POSSESSION_LENGTH,HOME_PTS_NET) %>% group_by(GAME_ID) %>% mutate(RESPONSE = lead(STREAK.6.120.DIREC,default = 0),AWAY_PTS_ROLL3=roll_sum_fill(AWAY_PTS,3),PERIOD.FAC = as.factor(PERIOD),TIME=cumsum(POSSESSION_LENGTH)) %>% ungroup() %>% select(GAME_ID,PERIOD.FAC,TEAM,AWAY_PTS_NET,STREAK.TEAM,PASSES,TOUCHES,DRIBBLES,RESPONSE,AWAY_PTS_ROLL3,TIME,GAME_ID,HOME_PTS_NET)
+
+possession1617.dataset.train = possession1617.dataset %>% filter(GAME_ID %in% game.train) %>% select(PERIOD.FAC,TEAM,AWAY_PTS_NET,AWAY_PTS_ROLL3,STREAK.TEAM,PASSES,TOUCHES,DRIBBLES,RESPONSE)
+
+possession1617.dataset.test = possession1617.dataset %>% filter(GAME_ID %in% game.test) %>% select(PERIOD.FAC,TEAM,AWAY_PTS_NET,AWAY_PTS_ROLL3,STREAK.TEAM,PASSES,TOUCHES,DRIBBLES)
+
+possession1617.dataset.test.truth = possession1617.dataset %>% filter(GAME_ID %in% game.test) %>% select(RESPONSE,TIME,GAME_ID,HOME_PTS_NET)
+
+  
+possession1617.fit = multinom(RESPONSE~., data=possession1617.dataset.train)
+
+summary(possession1617.fit)
+apply(possession1617.fit$residuals,2,mean)
+apply(possession1617.fit$residuals,2,range)
+
+possession1617.pred = predict(possession1617.fit,possession1617.dataset.test,"probs")
+
+# compare the top2 predictions with test truth
+
+possession1617.pred.top2 = apply(possession1617.pred,1,which.min) -2
+
+compare.top2 = possession1617.pred.top2 != possession1617.dataset.test.truth$RESPONSE
+mean(compare.top2)
+
+# compare the top1 predictions with test truth
+compare <- predict(possession1617.fit,possession1617.dataset.test) == possession1617.dataset.test.truth$RESPONSE
+mean(compare)
+
+```
+
+
+
+```{r Visualization}
+colnames(possession1617.pred)=c("Away_streak","No_streak","Home_streak")
+Viz=cbind(possession1617.dataset.test.truth,possession1617.dataset.test,possession1617.pred)
+names(Viz)
+
+
+I=36
+#Viz=Viz[Viz$GAME_ID==sort(unique(game.test)[I]),]
+Viz=Viz[Viz$GAME_ID=="21600099",]
+names(Viz)
+
+plot1=ggplot(data=Viz) +
+  geom_line(aes(Viz$TIME/600, Viz$AWAY_PTS_NET,group=1,color=factor(Viz$RESPONSE)),size=1.5) +  
+ scale_color_manual(values=c("#56B4E9","#330000","#E69F00" ))+labs(y = "Net Points",x="Time")+theme(legend.position="none")
+
+plot2=ggplot(data=Viz) +
+  geom_line(aes(Viz$TIME/600, Viz$Home_streak,group=1,color=(Viz$RESPONSE==1)),size=1.5)+labs(y = "Down",x="Time")+theme(legend.position="none")+
+ scale_color_manual(values=c("#330000","#E69F00" ))
+
+plot3=ggplot(data=Viz) +
+  geom_line(aes(Viz$TIME/600, Viz$Away_streak,group=1,color=(Viz$RESPONSE==-1)),size=1.5)+labs(y = "Up",x="Time")+theme(legend.position="none")+
+ scale_color_manual(values=c("#330000","#56B4E9" ))
+
+grid.arrange(plot1, plot2,plot3, ncol=1)
+```
+
