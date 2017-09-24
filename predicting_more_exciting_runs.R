@@ -91,19 +91,24 @@ possess_log_16_17["TEAM"] = team_map$Team[match(possess_log_16_17$TEAM_ID, team_
 #adding Megan's modeling variables
 model_data = data.frame(fread('poss_model_data.csv'))
 
+# add Megan's all star model data:
+all_star_model_data = data.frame(fread('all_star_model_data.csv'))
+all_star_model_data = all_star_model_data[which(!is.na(all_star_model_data$POSSESSION_ID)),]
+NUM_ALLSTARS = all_star_model_data$num_all_stars
+
 # change -1 to 1 and call offensive streak:
 OFFENSIVE_RUN = as.numeric(possess_log_16_17$STREAK.TEAM==1)
 DEFENSIVE_RUN = as.numeric(possess_log_16_17$STREAK.TEAM==-1)
 TEAM = possess_log_16_17$TEAM
-model_data = cbind(cbind(cbind(cbind(model_data, OFFENSIVE_RUN),TEAM),model.matrix( ~ PERIOD-1, data=possess_log_16_17)),DEFENSIVE_RUN)
+model_data = cbind(cbind(cbind(cbind(cbind(model_data, OFFENSIVE_RUN),TEAM),model.matrix( ~ PERIOD-1, data=possess_log_16_17)),DEFENSIVE_RUN),NUM_ALLSTARS)
 #model_data = model_data[, c(8,10,11,12,13,15,16,17,21,26,29,32,33,34,35,36,37,38,39)] # choose a subset of variables
 #model_data = model_data[, c(8,10,11,12,13,15,16,17,21,26,29)] # choose a subset of variables
-model_data = model_data[, c(8,10,11,12,13,15,16,21,40)] # choose a subset of variables
+model_data = model_data[, c(8,10,11,12,13,15,16,21,40,41)] # choose a subset of variables
 
 
 
 # read in data all stars data:
-all_stars = data.frame(fread('data_all_stars.csv'))
+#all_stars = data.frame(fread('data_all_stars.csv'))
 #new_all_stars = all_stars[apply(all_stars, 1, function(n) return(any(is.na(n)))),]
 
 
@@ -115,9 +120,12 @@ formula = as.formula(paste("OFFENSIVE_RUN ~", paste(paste(names(model_data),sep=
 formula
 run_pred_1 = glm(formula, data=model_data)
 run_pred_1
-run_sum_1 = summary(step(run_pred_1, direction = "backward", k = 2, trace = 0))
+run_sum_1 = summary(run_pred_1)
+#run_sum_1 = summary(step(run_pred_1, direction = "backward", k = 2, trace = 0))
 #run_sum_1 = summary(step(run_pred_1, direction = "backward", k = log(32), trace = 0))
 run_sum_1
+
+
 
 # Show a boxplot of coefficients:
 dwplot(run_pred_1)
@@ -129,9 +137,9 @@ formula2 = as.formula(paste("DEFENSIVE_RUN ~", paste(paste(names(model_data),sep
 formula2
 run_pred_2 = glm(formula2, data=model_data)
 run_pred_2
-#run_sum_2 = summary(run_pred_2)
-run_sum_2 = summary(step(run_pred_2, direction = "backward", k = log(32), trace = 0))
-run_sum_2 = summary(step(run_pred_2, direction = "backward", k = 2, trace = 0))
+run_sum_2 = summary(run_pred_2)
+#run_sum_2 = summary(step(run_pred_2, direction = "backward", k = log(32), trace = 0))
+#run_sum_2 = summary(step(run_pred_2, direction = "backward", k = 2, trace = 0))
 run_sum_2
 
 #formula3 = as.formula(paste("OFFENSIVE_RUN ~", paste(paste(names(model_data)[c(7,8,15)],sep=""), collapse="+")))
