@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017) (preloaded format=pdflatex 2017.5.23)  24 SEP 2017 08:30
+This is pdfTeX, Version 3.14159265-2.6-1.40.18 (TeX Live 2017) (preloaded format=pdflatex 2017.5.23)  24 SEP 2017 08:35
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -794,52 +794,52 @@ Package pdftex.def Info: Pplot2.jpeg used on input line 84.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-<results2.png, id=49, 635.37375pt x 328.22626pt>
+[2] <results2.png, id=57, 635.37375pt x 328.22626pt>
 File: results2.png Graphic file (type png)
  <use results2.png>
-Package pdftex.def Info: results2.png used on input line 97.
+Package pdftex.def Info: results2.png used on input line 99.
 (pdftex.def)             Requested size: 497.92322pt x 257.23247pt.
- [2]
+
 <odds_run_for.png, id=58, 375.65344pt x 153.57375pt>
 File: odds_run_for.png Graphic file (type png)
  <use odds_run_for.png>
-Package pdftex.def Info: odds_run_for.png used on input line 107.
+Package pdftex.def Info: odds_run_for.png used on input line 109.
 (pdftex.def)             Requested size: 271.0125pt x 110.80264pt.
 
 <odds_run_against.png, id=59, 368.1253pt x 139.27031pt>
 File: odds_run_against.png Graphic file (type png)
 
 <use odds_run_against.png>
-Package pdftex.def Info: odds_run_against.png used on input line 112.
+Package pdftex.def Info: odds_run_against.png used on input line 114.
 (pdftex.def)             Requested size: 271.0125pt x 102.53775pt.
 
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 121--122
+Underfull \hbox (badness 10000) in paragraph at lines 123--124
 
  []
 
-Package atveryend Info: Empty hook `BeforeClearDocument' on input line 126.
-[3 <./Net_points_curry.jpeg> <./Pplot2.jpeg> <./results2.png>] [4 <./odds_run_f
-or.png> <./odds_run_against.png>]
-Package atveryend Info: Empty hook `AfterLastShipout' on input line 126.
+[3 <./Net_points_curry.jpeg> <./Pplot2.jpeg> <./results2.png>]
+Package atveryend Info: Empty hook `BeforeClearDocument' on input line 128.
+ [4 <./odds_run_for.png> <./odds_run_against.png>]
+Package atveryend Info: Empty hook `AfterLastShipout' on input line 128.
  (./Final_Write_Up.aux)
-Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 126.
-Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 126.
+Package atveryend Info: Executing hook `AtVeryEndDocument' on input line 128.
+Package atveryend Info: Executing hook `AtEndAfterFileList' on input line 128.
 Package rerunfilecheck Info: File `Final_Write_Up.out' has not changed.
 (rerunfilecheck)             Checksum: B226952A4D8CB80E5FCFCCC960E31A7E;314.
 
 
 LaTeX Warning: There were multiply-defined labels.
 
-Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 126.
+Package atveryend Info: Empty hook `AtVeryVeryEnd' on input line 128.
  ) 
 Here is how much of TeX's memory you used:
  8461 strings out of 492995
  126974 string characters out of 6132704
- 226231 words of memory out of 5000000
+ 227231 words of memory out of 5000000
  11916 multiletter control sequences out of 15000+600000
  7794 words of font info for 28 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
@@ -855,7 +855,7 @@ texlive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></usr/local/tex
 live/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local/texl
 ive/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb></usr/local/texli
 ve/2017/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt8.pfb>
-Output written on Final_Write_Up.pdf (4 pages, 530801 bytes).
+Output written on Final_Write_Up.pdf (4 pages, 531658 bytes).
 PDF statistics:
  112 PDF objects out of 1000 (max. 8388607)
  87 compressed objects within 1 object stream
