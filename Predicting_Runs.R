@@ -1,12 +1,12 @@
 # load libraries:
 library(data.table); library(dplyr); library(tidyr); library(plyr); library(XML)
-library(lmer)
+library(lmer); library(plyr)
 
 
 
 # set working directory:
-setwd("C:/Users/Derek/Documents/2017/summer/NBA/hackathon/data/Basketball Data-selected")
-
+#setwd("C:/Users/Derek/Documents/2017/summer/NBA/hackathon/data/Basketball Data-selected")
+setwd('/Users/meganrobertson/Desktop/Basketball_Data/') #change to your data location
 
 
 # create function to find opponenent for each possession:
@@ -43,14 +43,24 @@ find_runs <- function(possess_log, threshold, half_window){
 
 
 # read in possession logs:
-possess_log_16_17 = data.frame(fread('2016-17_nba_possession_log.txt'))
+#possess_log_16_17 = data.frame(fread('2016-17_nba_possession_log.txt'))
+possess_log_16_17 = data.frame(fread('/Users/meganrobertson/Desktop/Nothing_But_Elastic_Nets/possession_1617_labeled.csv'))
 possess_log_16_17[["SEASON"]] = "2016-2017"
 possess_log = possess_log_16_17 # rbind(possess_log_14_15, possess_log_15_16, possess_log_16_17)
 possess_log$PERIOD = as.factor(possess_log$PERIOD)
 possess_log$TEAM_ID[which(possess_log$TEAM_ID=="(null)")] = "1610612766" # Change "(null)" to Hornets
-possess_log = possess_log[1:10000, ] # Take a subset of first 10000 observations
-possess_log = cbind(possess_log, model.matrix( ~ PERIOD-1, data=possess_log)) # add variables for each period 
+#possess_log = possess_log[1:10000, ] # Take a subset of first 10000 observations
+#possess_log = cbind(possess_log, model.matrix( ~ PERIOD-1, data=possess_log)) # add variables for each period 
 
+#reading in other logs 
+reb = data.frame(fread('2016-17_nba_reb_log.txt'))
+shot = data.frame(fread('2016-17_nba_shot_log.txt'))
+shot['good_shot'] = 0
+shot[which(shot$SHOT_DIST <= 6), 'good_shot'] = 1
+
+#plots to determine reasonable cut-offs for good shots
+#ggplot(shot, aes(x=SHOT_DIST, fill=SHOT_RESULT)) + geom_density(alpha=0.5)
+#ggplot(shot, aes(x=CLOSE_DEF_DIST, fill=SHOT_RESULT)) + geom_density(alpha=0.5)
 
 
 # read in team map: 
@@ -69,9 +79,30 @@ possess_log["TEAM"] = team_map$Team[match(possess_log$TEAM_ID, team_map$Team_ID)
 #possess_log["OPPONENT"] = find_opponent(possess_log, team_map)
 
 # include a run variable: 
-threshold = 5 
-half_window = 5
-possess_log["RUN"] = find_runs(possess_log, threshold, half_window)
+#threshold = 5 
+#half_window = 5
+#possess_log["RUN"] = find_runs(possess_log, threshold, half_window)
+
+#adding Megan's modeling variables
+#function to add  information to a row, apply to the possession logs for the three seasons
+add_info <- function(poss){
+  
+  #information from the shot log
+  shots = shot[which(shot$GAME_ID == poss$GAME_ID & shot$PERIOD == poss$PERIOD),]
+  range_shots = shots[which(shots$GAME_CLOCK >= poss$GAME_CLOCK_END & shots$GAME_CLOCK <= poss$GAME_CLOCK_START & shots$PERIOD == poss$PERIOD), ] #shots in the time range of possession
+  poss['num_shots'] = sum(range_shots$FGA) #number of attempted shots during the possession
+  poss['made_shots'] = sum(range_shots$FGM) #number of made shots during the possession
+  poss['num_good_shots'] = sum(range_shots$good_shot) #how many good shots attempted
+  
+  
+  #information from the rebound log, does a rebound start the possession?
+  rebs = reb[which(reb$GAME_ID == poss$GAME_ID & reb$PERIOD == poss$PERIOD & reb$GAME_CLOCK >= poss$GAME_CLOCK_END & reb$GAME_CLOCK <= poss$GAME_CLOCK_START),] #all rebounds in the game
+  poss['num_reb'] = nrow(rebs)
+  
+  return(poss)
+}
+
+model_data = adply(possess_log_16_17, 1, add_info)
 
 
 
