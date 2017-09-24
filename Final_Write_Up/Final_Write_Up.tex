@@ -23,7 +23,9 @@
 
 \section{Introduction}
 
-We chose to investigate the fourth prompt during the NBA Hackathon - create a model to predict exciting runs during games. 
+We chose to investigate the fourth prompt during the NBA Hackathon - create a model to predict exciting runs during games. One way to define a run is when a team scores on multiple consecutive possessions without the opponent scoring any points in between. This definition captures many runs, but it does not capture the scenario in which a team makes three-pointers on three consecutive possessions, and the other team scores a quiet lay-up in between. We propose a novel and flexible definition of runs which captures scenarios like this. \newline
+
+With runs well defined, we set out with a goal to learn which covariates, or features of the current gameplay, correlate strongly with runs. A few specific hypotheses motivate our analysis. We think there are scenarios in which a streak is more likely. A motivating halftime speech, a large skill differential between the offense?s and defense?s lineups, or an opponent with a propensity to turnover the ball may increase the likelihood of a streak. On the other hand, some features may decrease the likelihood of a run. Playing the second game of a back to back is one example.
 
 \section{Defining an "exciting" run}
 
@@ -53,5 +55,19 @@ We approached predicting exciting runs as a classification problem, each possess
 - chart with models
 
 \section{Results}
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[width=100mm]{results.pdf}
+\caption{Modeling Results}
+\end{center}
+\end{figure}
+
+\section{Next Steps}
+
+This project was an attempt to answer a very complex question in a sort period of time. There are a few routes we would consider if we had more time to continue the project. To begin with, there is more data that will most likely capture the variability of whether a possession could be classified as a run. At the moment, the skill of the players is captured by the number of all stars on the court during a possession. However, analyzing different combinations of players, particularly when there are starting players vs. bench players, etc, would be interesting to examine in regards to runs. \newline
+
+Another next step would be to examine different types of classification models. There are many different types of machine learning algorithms that could be implemented in such a project. A more abstract model, such as a decision tree or a support vector machine might capture some of the complicated relationships that are present in the data. 
+ 
 
 \end{document}
