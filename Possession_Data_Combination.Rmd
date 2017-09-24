@@ -1,0 +1,68 @@
+---
+title: "Adding Variables to Possession Log and Distribution Information"
+author: "Megan Robertson"
+date: "9/23/2017"
+output: html_document
+---
+
+```{r}
+#adding information to the possession long for modeling
+library(dplyr); library(data.table); library(plyr)
+setwd('/Users/meganrobertson/Desktop/Basketball_Data/') #change to your data location
+
+play_by_play = data.frame(fread('Play_by_Play_New.csv'))
+play_by_play = filter(play_by_play, Season %in% c(2016)) #reducing to three seasons of possession data
+
+#all star information
+player_details = data.frame(fread('2014-17_nba_player_details_data.txt'))
+all_star = data.frame(fread('all_star_info.csv'))
+all_star = all_star[rowSums(is.na(all_star)) == 0,]
+all_star$PLAYERS = tolower(all_star$PLAYERS)
+
+#merge on name.....
+player_details$PLAYERS = tolower(player_details$Display_First_Last)
+comb_data = merge(player_details, all_star, by='PLAYERS')
+
+#reading in and combining data
+possess = data.frame(fread('2016-17_nba_possession_log.txt'))
+
+#rebound logs
+reb = data.frame(fread('2016-17_nba_reb_log.txt'))
+
+#shot logs
+shot = data.frame(fread('2016-17_nba_shot_log.txt'))
+
+#adding an indicator for a "good" shot
+shot['good_shot'] = 0
+
+#plots to determine reasonable cut-offs for good shots
+ggplot(shot, aes(x=SHOT_DIST, fill=SHOT_RESULT)) + geom_density(alpha=0.5)
+ggplot(shot, aes(x=CLOSE_DEF_DIST, fill=SHOT_RESULT)) + geom_density(alpha=0.5)
+shot[which(shot$SHOT_DIST <= 6), 'good_shot'] = 1
+
+
+
+#function to add  information to a row, apply to the possession logs for the three seasons
+add_info <- function(poss){
+  
+  #information from the shot log
+  shots = shot[which(shot$GAME_ID == poss$GAME_ID & shot$PERIOD == poss$PERIOD),]
+ range_shots = shots[which(shots$GAME_CLOCK >= poss$GAME_CLOCK_END & shots$GAME_CLOCK <= poss$GAME_CLOCK_START & shots$PERIOD == poss$PERIOD), ] #shots in the time range of possession
+ poss['num_shots'] = sum(range_shots$FGA) #number of attempted shots during the possession
+ poss['made_shots'] = sum(range_shots$FGM) #number of made shots during the possession
+ poss['num_good_shots'] = sum(range_shots$good_shot) #how many good shots attempted
+ 
+ 
+ #information from the rebound log, does a rebound start the possession?
+ rebs = reb[which(reb$GAME_ID == poss$GAME_ID & reb$PERIOD == poss$PERIOD & reb$GAME_CLOCK >= poss$GAME_CLOCK_END & reb$GAME_CLOCK <= poss$GAME_CLOCK_START),] #all rebounds in the game
+ poss['num_reb'] = nrow(rebs)
+ 
+ return(poss)
+}
+
+#adding the data to the possession log
+model_data = adply(possess, 1, add_info)
+```
+
+
+
