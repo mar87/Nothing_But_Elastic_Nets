@@ -38,6 +38,8 @@ In order to make the project approachable during a 24-hour time period, a simpli
 \end{center}
 \end{figure}
 
+The algorithm first finds the interval of length $t$ having as left endpoint the $t_0$, that is the time when the first possession ends. Then, it computes the maximum and the minimum that the function $H()$ attains in the interval, i.e. the highest point difference that we observe in $[t_0,t_0+2]$. We have a run if this point difference exceeds a definite threshold, and if this is the case then we label the points between the Maximum and the minimum as part of the \textit{exiting} streak. Then, we translate the interval and we check $[t_1,t_1+2]$,$[t_2,t_2+2]$, etc. We chose $t$ to be 2 minutes because we wanted to consider exciting,  fast-happening, runs. However, it is clearly possible to $t$ according to different goals. Finally, this choice of $t$ generates around $2-3$ runs per game, so that around 20-30\% of points are labelled as part of a run, making them even harder to detect. 
+
 
 \section{Feature Generation}
 
